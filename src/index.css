@@ -1,0 +1,75 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 33% 11%;
+    --foreground: 210 40% 98%;
+
+    --card: 240 25% 12%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 240 25% 12%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 260 45% 56%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 240 25% 18%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 240 25% 18%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 260 45% 56%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 240 25% 16%;
+    --input: 240 25% 16%;
+    --ring: 255 65% 75%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 240 25% 10%;
+    --sidebar-foreground: 240 10% 90%;
+    --sidebar-primary: 260 50% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 25% 15%;
+    --sidebar-accent-foreground: 240 10% 90%;
+    --sidebar-border: 240 25% 15%;
+    --sidebar-ring: 255 65% 75%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom styles */
+.gradient-text {
+  @apply text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-600;
+}
+
+.cyber-card {
+  @apply bg-card rounded-lg border border-border/50 p-6 transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10;
+}
+
+.cyber-button {
+  @apply bg-primary hover:bg-primary/90 text-white py-3 px-6 rounded-md font-medium transition-all duration-200;
+}
+
+.cyber-card-glow {
+  @apply relative before:absolute before:inset-0 before:-z-10 before:rounded-lg before:bg-gradient-to-r before:from-primary/20 before:to-purple-400/20 before:blur-xl;
+}
