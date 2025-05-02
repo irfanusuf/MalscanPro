@@ -144,9 +144,12 @@ const ThreatPrediction = () => {
                 <CardContent>
                   <form id="predictionForm" onSubmit={handleSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+
+
                       <div className="space-y-2">
                         <Label htmlFor="srv_count">
-                          Services Count
+                          {/* Services Count */} Static Priority
                           <span className="ml-1 text-xs text-muted-foreground">(1-100)</span>
                         </Label>
                         <Input 
@@ -160,13 +163,19 @@ const ThreatPrediction = () => {
                           required
                         />
                         <p className="text-xs text-muted-foreground">
-                          Number of connections to the same service
+                          {/* Number of connections to the same service */}
+                          The basic priority of a process , unaffected by dynamci scheduling
                         </p>
                       </div>
+
+
+
+
                       
                       <div className="space-y-2">
                         <Label htmlFor="dst_host_count">
-                          Destination Host Count
+                          {/* Destination Host Count */}
+                          VM truncate Count
                           <span className="ml-1 text-xs text-muted-foreground">(1-500)</span>
                         </Label>
                         <Input 
@@ -180,10 +189,41 @@ const ThreatPrediction = () => {
                           required
                         />
                         <p className="text-xs text-muted-foreground">
-                          Number of connections to the same destination host
+                          {/* Number of connections to the same destination host */}
+
+                          The number of truncation operations performed on the virtual memory area 
                         </p>
                       </div>
                       
+
+
+
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="dst_host_count">
+                          {/* Destination Host Count */}
+                          Shared Virtual Memory
+                          <span className="ml-1 text-xs text-muted-foreground">(1-500)</span>
+                        </Label>
+                        <Input 
+                          id="dst_host_count"
+                          name="dst_host_count"
+                          type="number"
+                          value={formData.dst_host_count}
+                          onChange={handleChange}
+                          min="1"
+                          max="500"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {/* Number of connections to the same destination host */}
+
+                         The size of the Memory shared among the processes in the system
+                        </p>
+                      </div>
+
+
+
                       <div className="space-y-2">
                         <Label htmlFor="diff_srv_rate">
                           Different Services Rate

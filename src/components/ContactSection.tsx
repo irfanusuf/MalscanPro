@@ -131,7 +131,7 @@ const ContactSection = () => {
                       href="mailto:contact@securehorizon.com" 
                       className="text-muted-foreground hover:text-primary"
                     >
-                      contact@securehorizon.com
+                      contact@malscanpro.com
                     </a>
                   </div>
                 </div>
@@ -147,7 +147,7 @@ const ContactSection = () => {
                     </a>
                   </div>
                 </div>
-                <div className="flex items-start gap-3">
+                {/* <div className="flex items-start gap-3">
                   <MapPin className="w-5 h-5 text-primary mt-0.5" />
                   <div>
                     <p className="font-medium">Visit Us</p>
@@ -156,7 +156,7 @@ const ContactSection = () => {
                       Cyber City, CS 12345
                     </p>
                   </div>
-                </div>
+                </div> */}
               </div>
             </div>
             <div className="cyber-card">

@@ -66,8 +66,10 @@ const HeroSection = () => {
               <h3 className="font-semibold">Security Intelligence</h3>
               <p className="text-xs text-muted-foreground">Real-time insights</p>
             </div>
-            
+
+
             <div className="cyber-card bg-gradient-to-br from-primary/20 to-transparent p-5">
+             <Shield className="w-6 h-6 text-primary mb-3" />
               <h3 className="font-semibold">Secure Today</h3>
               <p className="text-xs text-muted-foreground">Enterprise-grade protection</p>
             </div>
