@@ -11,13 +11,13 @@ const AboutSection = () => {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-secondary/30 px-3 py-1 text-sm mb-5">
               <Shield className="w-4 h-4 text-primary" />
-              <span>About SecureHorizon</span>
+              <span>About Malscan Pro</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold mb-6">
               Protecting Your Digital <span className="gradient-text">Infrastructure</span>
             </h2>
             <p className="text-muted-foreground mb-6">
-              SecureHorizon was founded with a clear mission: to make advanced security intelligence and protection 
+              Malscan pro was founded with a clear mission: to make advanced security intelligence and protection 
               accessible to organizations of all sizes. Our team of security experts and data scientists has developed 
               cutting-edge tools that leverage the power of machine learning to predict, identify, and mitigate cyber threats.
             </p>

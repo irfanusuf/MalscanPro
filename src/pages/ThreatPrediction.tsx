@@ -1,17 +1,16 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
+import {
   Card,
   CardContent,
   CardDescription,
@@ -25,10 +24,21 @@ import NavigationBar from "@/components/NavigationBar";
 import Footer from "@/components/Footer";
 
 interface FormData {
-  srv_count: number;
-  dst_host_count: number;
-  diff_srv_rate: number;
-  dst_host_serror_rate: number;
+  static_prio: number;
+  utime: number;
+  free_area_cache: number;
+  nvcsw: number;
+  vm_truncate_count: number;
+  maj_flt: number;
+  end_data: number;
+  shared_vm: number;
+  exec_vm: number;
+  mm_users: number;
+  reserved_vm: number;
+  map_count: number;
+  last_interval: number;
+  total_vm: number;
+  nivcsw: number;
   model: string;
 }
 
@@ -36,18 +46,31 @@ const ThreatPrediction = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+
   const [result, setResult] = useState<null | {
     prediction: string;
+    type: string;
     confidence: number;
-    threatLevel: 'low' | 'medium' | 'high';
+    threatLevel: "low" | "medium" | "high";
     details: string;
   }>(null);
-  
+
   const [formData, setFormData] = useState<FormData>({
-    srv_count: 5,
-    dst_host_count: 100,
-    diff_srv_rate: 0.05,
-    dst_host_serror_rate: 0.01,
+    static_prio: 10,
+    utime: 50,
+    free_area_cache: 1000,
+    nvcsw: 20,
+    vm_truncate_count: 5,
+    maj_flt: 2,
+    end_data: 0x08000000,
+    shared_vm: 500,
+    exec_vm: 600,
+    mm_users: 1,
+    reserved_vm: 150,
+    map_count: 30,
+    last_interval: 10,
+    total_vm: 2000,
+    nivcsw: 5,
     model: "random_forest",
   });
 
@@ -66,9 +89,9 @@ const ThreatPrediction = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ 
-      ...prev, 
-      [name]: name.includes("rate") ? parseFloat(value) : parseInt(value, 10) 
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name.includes("rate") ? parseFloat(value) : parseInt(value, 10),
     }));
   };
 
@@ -76,48 +99,118 @@ const ThreatPrediction = () => {
     setFormData((prev) => ({ ...prev, model: value }));
   };
 
+  const analyzeThreat = (data: FormData): number => {
+    let score = 0;
+
+    // Priority: lower static priority → higher threat
+    score += data.static_prio < 20 ? 0.1 : 0;
+
+    // User time: unusually high utime may indicate heavy computation
+    score += data.utime > 100 ? 0.05 : 0;
+
+    // Free area cache: low free memory can indicate memory pressure
+    score += data.free_area_cache < 500 ? 0.05 : 0;
+
+    // Voluntary context switches: very high may be abnormal
+    score += data.nvcsw > 50 ? 0.1 : 0;
+
+    // VM truncate count: high count can indicate memory tampering
+    score += data.vm_truncate_count > 10 ? 0.1 : 0;
+
+    // Major faults: high value can suggest I/O or memory issues
+    score += data.maj_flt > 5 ? 0.1 : 0;
+
+    // End of data segment: very high might suggest obfuscation
+    score += data.end_data > 0x10000000 ? 0.05 : 0;
+
+    // Shared VM: unusually high could suggest multi-process manipulation
+    score += data.shared_vm > 1000 ? 0.05 : 0;
+
+    // Executable VM: high value might suggest code loading
+    score += data.exec_vm > 1000 ? 0.1 : 0;
+
+    // MM users: high number of processes sharing memory
+    score += data.mm_users > 3 ? 0.05 : 0;
+
+    // Reserved VM: high amount of reserved memory
+    score += data.reserved_vm > 500 ? 0.05 : 0;
+
+    // Map count: too many memory maps can be suspicious
+    score += data.map_count > 50 ? 0.15 : 0;
+
+    // Last interval: very small interval might be aggressive behavior
+    score += data.last_interval < 5 ? 0.05 : 0;
+
+    // Total VM: very large memory space
+    score += data.total_vm > 5000 ? 0.15 : 0;
+
+    // Involuntary context switches: frequent forced context switches
+    score += data.nivcsw > 10 ? 0.1 : 0;
+
+    // Clamp the score to [0, 1]
+    return Math.min(1, score);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulate ML model processing
+
+    try {
+        setIsLoading(true);
+
     setTimeout(() => {
-      // This would be a real ML prediction in a production app
-      const threatScore = Math.random();
-      let threatLevel: 'low' | 'medium' | 'high';
+      const threatScore = analyzeThreat(formData);
+      let threatLevel: "low" | "medium" | "high";
       let prediction: string;
-      
+      let type: string;
+
       if (threatScore < 0.3) {
-        threatLevel = 'low';
+        threatLevel = "low";
         prediction = "Normal Traffic";
+        type = "No Malware";
       } else if (threatScore < 0.7) {
-        threatLevel = 'medium';
+        threatLevel = "medium";
         prediction = "Suspicious Activity";
+        type = "Malware Detected";
       } else {
-        threatLevel = 'high';
+        threatLevel = "high";
         prediction = "Potential Attack";
+        type = "Trojan Detected";
       }
-      
+
       setResult({
         prediction,
+        type,
         confidence: Math.round(threatScore * 100),
         threatLevel,
-        details: `Based on the ${formData.model.replace('_', ' ')} model, the analysis indicates a ${prediction.toLowerCase()} pattern.`
+        details: `Based on the ${formData.model.replace(
+          "_",
+          " "
+        )} model, the analysis indicates ${prediction.toLowerCase()}.`,
       });
-      
+
       toast({
         title: "Analysis Complete",
         description: "Threat prediction has been generated.",
       });
-      
+
       setIsLoading(false);
-    }, 1500);
-  };
+    }, 3000); // Optional: keep a small delay for UX
+ 
+      
+    } catch (error) {
+      console.error(error)
+    }finally{
+     setTimeout(() => {
+      setResult(null)
+     }, 20000);
+
+    }
+   };
 
   return (
     <div className="min-h-screen flex flex-col">
       <NavigationBar />
-      
+
       <div className="flex-1 py-12 px-6 md:px-10">
         <div className="max-w-6xl mx-auto">
           <div className="mb-8">
@@ -125,175 +218,403 @@ const ThreatPrediction = () => {
               <ShieldAlert className="w-4 h-4 text-primary" />
               <span>Advanced Tool</span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">Threat Prediction</h1>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">
+              Threat Prediction
+            </h1>
             <p className="text-muted-foreground">
-              Predict potential security threats using machine learning algorithms and network traffic data.
+              Predict potential security threats using machine learning
+              algorithms and network traffic data.
             </p>
           </div>
-          
+
           <div className="grid md:grid-cols-3 gap-8">
             <div className="md:col-span-2">
               <Card>
                 <CardHeader>
                   <CardTitle>Input Parameters</CardTitle>
                   <CardDescription>
-                    Enter network connection parameters to analyze threat potential
+                    Enter network connection parameters to analyze threat
+                    potential
                   </CardDescription>
                 </CardHeader>
-                
+
                 <CardContent>
-                  <form id="predictionForm" onSubmit={handleSubmit} className="space-y-6">
+                  <form
+                    id="predictionForm"
+                    onSubmit={handleSubmit}
+                    className="space-y-6"
+                  >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-
-
-
                       <div className="space-y-2">
-                        <Label htmlFor="srv_count">
-                          {/* Services Count */} Static Priority
-                          <span className="ml-1 text-xs text-muted-foreground">(1-100)</span>
+                        <Label htmlFor="static_prio">
+                          Static Priority
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            (0–139)
+                          </span>
                         </Label>
-                        <Input 
-                          id="srv_count"
-                          name="srv_count"
+                        <Input
+                          id="static_prio"
+                          name="static_prio"
                           type="number"
-                          value={formData.srv_count}
+                          value={formData.static_prio}
                           onChange={handleChange}
-                          min="1"
-                          max="100"
+                          min="0"
+                          max="139"
                           required
                         />
                         <p className="text-xs text-muted-foreground">
-                          {/* Number of connections to the same service */}
-                          The basic priority of a process , unaffected by dynamci scheduling
+                          The base priority of a process. Lower values have
+                          higher priority.
                         </p>
                       </div>
 
-
-
-
-                      
                       <div className="space-y-2">
-                        <Label htmlFor="dst_host_count">
-                          {/* Destination Host Count */}
-                          VM truncate Count
-                          <span className="ml-1 text-xs text-muted-foreground">(1-500)</span>
+                        <Label htmlFor="utime">
+                          User Time
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            (0–1,000,000 clock ticks)
+                          </span>
                         </Label>
-                        <Input 
-                          id="dst_host_count"
-                          name="dst_host_count"
+                        <Input
+                          id="utime"
+                          name="utime"
                           type="number"
-                          value={formData.dst_host_count}
+                          value={formData.utime}
                           onChange={handleChange}
-                          min="1"
-                          max="500"
+                          min="0"
+                          max="1000000"
                           required
                         />
                         <p className="text-xs text-muted-foreground">
-                          {/* Number of connections to the same destination host */}
-
-                          The number of truncation operations performed on the virtual memory area 
+                          Time the process has executed in user mode.
                         </p>
                       </div>
-                      
 
-
-
-                      
                       <div className="space-y-2">
-                        <Label htmlFor="dst_host_count">
-                          {/* Destination Host Count */}
+                        <Label htmlFor="free_area_cache">
+                          Free Area Cache
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            (0–1,000,000 KB)
+                          </span>
+                        </Label>
+                        <Input
+                          id="free_area_cache"
+                          name="free_area_cache"
+                          type="number"
+                          value={formData.free_area_cache}
+                          onChange={handleChange}
+                          min="0"
+                          max="1000000"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Amount of free memory available in the system cache.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="nvcsw">
+                          Voluntary Context Switches
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            (0–100,000)
+                          </span>
+                        </Label>
+                        <Input
+                          id="nvcsw"
+                          name="nvcsw"
+                          type="number"
+                          value={formData.nvcsw}
+                          onChange={handleChange}
+                          min="0"
+                          max="100000"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Times the process voluntarily yielded the CPU.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="vm_truncate_count">
+                          VM Truncate Count
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            (0–10,000)
+                          </span>
+                        </Label>
+                        <Input
+                          id="vm_truncate_count"
+                          name="vm_truncate_count"
+                          type="number"
+                          value={formData.vm_truncate_count}
+                          onChange={handleChange}
+                          min="0"
+                          max="10000"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Number of truncation operations on the virtual memory
+                          area.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="maj_flt">
+                          Major Page Faults
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            (0–10,000)
+                          </span>
+                        </Label>
+                        <Input
+                          id="maj_flt"
+                          name="maj_flt"
+                          type="number"
+                          value={formData.maj_flt}
+                          onChange={handleChange}
+                          min="0"
+                          max="10000"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Number of page faults requiring disk access.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="end_data">
+                          End of Data Segment
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            (0x08000000–0xC0000000)
+                          </span>
+                        </Label>
+                        <Input
+                          id="end_data"
+                          name="end_data"
+                          type="text"
+                          value={formData.end_data}
+                          onChange={handleChange}
+                          // pattern="^0x[0-9A-Fa-f]+$"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Hex address marking the end of the process’s data
+                          segment.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="shared_vm">
                           Shared Virtual Memory
-                          <span className="ml-1 text-xs text-muted-foreground">(1-500)</span>
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            (0–1,048,576 KB)
+                          </span>
                         </Label>
-                        <Input 
-                          id="dst_host_count"
-                          name="dst_host_count"
+                        <Input
+                          id="shared_vm"
+                          name="shared_vm"
                           type="number"
-                          value={formData.dst_host_count}
+                          value={formData.shared_vm}
+                          onChange={handleChange}
+                          min="0"
+                          max="1048576"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Memory shared among processes.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="exec_vm">
+                          Executable Virtual Memory
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            (0–524,288 KB)
+                          </span>
+                        </Label>
+                        <Input
+                          id="exec_vm"
+                          name="exec_vm"
+                          type="number"
+                          value={formData.exec_vm}
+                          onChange={handleChange}
+                          min="0"
+                          max="524288"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Size of executable code in virtual memory.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="mm_users">
+                          Memory Manager Users
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            (1–500)
+                          </span>
+                        </Label>
+                        <Input
+                          id="mm_users"
+                          name="mm_users"
+                          type="number"
+                          value={formData.mm_users}
                           onChange={handleChange}
                           min="1"
                           max="500"
                           required
                         />
                         <p className="text-xs text-muted-foreground">
-                          {/* Number of connections to the same destination host */}
-
-                         The size of the Memory shared among the processes in the system
+                          Number of processes using the same memory manager.
                         </p>
                       </div>
 
-
-
                       <div className="space-y-2">
-                        <Label htmlFor="diff_srv_rate">
-                          Different Services Rate
-                          <span className="ml-1 text-xs text-muted-foreground">(0-1)</span>
+                        <Label htmlFor="reserved_vm">
+                          Reserved Virtual Memory
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            (0–1,048,576 KB)
+                          </span>
                         </Label>
-                        <Input 
-                          id="diff_srv_rate"
-                          name="diff_srv_rate"
+                        <Input
+                          id="reserved_vm"
+                          name="reserved_vm"
                           type="number"
-                          step="0.01"
-                          value={formData.diff_srv_rate}
+                          value={formData.reserved_vm}
                           onChange={handleChange}
                           min="0"
-                          max="1"
+                          max="1048576"
                           required
                         />
                         <p className="text-xs text-muted-foreground">
-                          Percentage of connections to different services
+                          Reserved virtual memory not currently in use.
                         </p>
                       </div>
-                      
+
                       <div className="space-y-2">
-                        <Label htmlFor="dst_host_serror_rate">
-                          Destination Host S.Error Rate
-                          <span className="ml-1 text-xs text-muted-foreground">(0-1)</span>
+                        <Label htmlFor="map_count">
+                          Memory Map Count
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            (1–10,000)
+                          </span>
                         </Label>
-                        <Input 
-                          id="dst_host_serror_rate"
-                          name="dst_host_serror_rate"
+                        <Input
+                          id="map_count"
+                          name="map_count"
                           type="number"
-                          step="0.01"
-                          value={formData.dst_host_serror_rate}
+                          value={formData.map_count}
                           onChange={handleChange}
-                          min="0"
-                          max="1"
+                          min="1"
+                          max="10000"
                           required
                         />
                         <p className="text-xs text-muted-foreground">
-                          Percentage of connections with SYN errors
+                          Number of virtual memory mappings for the process.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="last_interval">
+                          Last Interval
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            (0–3600 seconds)
+                          </span>
+                        </Label>
+                        <Input
+                          id="last_interval"
+                          name="last_interval"
+                          type="number"
+                          value={formData.last_interval}
+                          onChange={handleChange}
+                          min="0"
+                          max="3600"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Time in seconds since the last relevant system event.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="total_vm">
+                          Total Virtual Memory
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            (0–2,097,152 KB)
+                          </span>
+                        </Label>
+                        <Input
+                          id="total_vm"
+                          name="total_vm"
+                          type="number"
+                          value={formData.total_vm}
+                          onChange={handleChange}
+                          min="0"
+                          max="2097152"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Total virtual memory in use by the process.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="nivcsw">
+                          Involuntary Context Switches
+                          <span className="ml-1 text-xs text-muted-foreground">
+                            (0–100,000)
+                          </span>
+                        </Label>
+                        <Input
+                          id="nivcsw"
+                          name="nivcsw"
+                          type="number"
+                          value={formData.nivcsw}
+                          onChange={handleChange}
+                          min="0"
+                          max="100000"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Times process was preempted involuntarily by the OS
+                          scheduler.
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="model">Machine Learning Model</Label>
-                      <Select 
-                        value={formData.model} 
+                      <Select
+                        value={formData.model}
                         onValueChange={handleSelectChange}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select a model" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="decision_tree">Decision Tree</SelectItem>
-                          <SelectItem value="random_forest">Random Forest</SelectItem>
-                          <SelectItem value="logistic_regression">Logistic Regression</SelectItem>
-                          <SelectItem value="neural_network">Neural Network</SelectItem>
+                          <SelectItem value="decision_tree">
+                            Decision Tree
+                          </SelectItem>
+                          <SelectItem value="random_forest">
+                            Random Forest
+                          </SelectItem>
+                          <SelectItem value="logistic_regression">
+                            Logistic Regression
+                          </SelectItem>
+                          <SelectItem value="neural_network">
+                            Neural Network
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        Different models may provide varying results based on their algorithms
+                        Different models may provide varying results based on
+                        their algorithms
                       </p>
                     </div>
                   </form>
                 </CardContent>
-                
+
                 <CardFooter>
-                  <Button 
-                    form="predictionForm" 
-                    type="submit" 
+                  <Button
+                    form="predictionForm"
+                    type="submit"
                     className="gap-2"
                     disabled={isLoading}
                   >
@@ -309,7 +630,7 @@ const ThreatPrediction = () => {
                 </CardFooter>
               </Card>
             </div>
-            
+
             <div>
               <Card className="sticky top-4">
                 <CardHeader>
@@ -318,39 +639,54 @@ const ThreatPrediction = () => {
                     Threat prediction based on input parameters
                   </CardDescription>
                 </CardHeader>
-                
+
                 <CardContent>
                   {result ? (
                     <div className="space-y-6">
                       <div className="text-center py-3">
-                        <div className={`inline-flex items-center justify-center rounded-full p-4 mb-2
-                          ${result.threatLevel === 'low' ? 'bg-green-500/20 text-green-500' :
-                            result.threatLevel === 'medium' ? 'bg-yellow-500/20 text-yellow-500' :
-                            'bg-red-500/20 text-red-500'}`}
+                        <div
+                          className={`inline-flex items-center justify-center rounded-full p-4 mb-2
+                          ${
+                            result.threatLevel === "low"
+                              ? "bg-green-500/20 text-green-500"
+                              : result.threatLevel === "medium"
+                              ? "bg-yellow-500/20 text-yellow-500"
+                              : "bg-red-500/20 text-red-500"
+                          }`}
                         >
-                          {result.threatLevel === 'low' ? (
+                          {result.threatLevel === "low" ? (
                             <ShieldAlert className="w-8 h-8" />
-                          ) : result.threatLevel === 'medium' ? (
+                          ) : result.threatLevel === "medium" ? (
                             <Info className="w-8 h-8" />
                           ) : (
                             <TrendingUp className="w-8 h-8" />
                           )}
                         </div>
-                        <h3 className="text-2xl font-bold mb-1">{result.prediction}</h3>
+                        <h3 className="text-2xl font-bold mb-1">
+                          {result.prediction}
+                        </h3>
+
+                        <h3 className="text-2xl font-bold mb-1">
+                          {result.type}
+                        </h3>
                         <p className="text-muted-foreground">
                           Confidence: {result.confidence}%
                         </p>
                       </div>
-                      
+
                       <div className="space-y-3">
                         <div>
-                          <div className="text-sm font-medium mb-1">Threat Level</div>
+                          <div className="text-sm font-medium mb-1">
+                            Threat Level
+                          </div>
                           <div className="w-full bg-secondary/30 rounded-full h-2.5">
-                            <div 
+                            <div
                               className={`h-2.5 rounded-full ${
-                                result.threatLevel === 'low' ? 'bg-green-500' :
-                                result.threatLevel === 'medium' ? 'bg-yellow-500' :
-                                'bg-red-500'
+                                result.threatLevel === "low"
+                                  ? "bg-green-500"
+                                  : result.threatLevel === "medium"
+                                  ? "bg-yellow-500"
+                                  : "bg-red-500"
                               }`}
                               style={{ width: `${result.confidence}%` }}
                             ></div>
@@ -361,22 +697,32 @@ const ThreatPrediction = () => {
                             <span>High</span>
                           </div>
                         </div>
-                        
+
                         <div className="p-4 bg-secondary/30 rounded-lg text-sm">
                           <p>{result.details}</p>
                         </div>
-                        
+
                         <div className="text-xs text-muted-foreground">
-                          <p>Analysis performed using {formData.model.replace('_', ' ')} algorithm</p>
+                          <p>
+                            Analysis performed using{" "}
+                            {formData.model.replace("_", " ")} algorithm
+                          </p>
                           <p>Timestamp: {new Date().toLocaleString()}</p>
                         </div>
                       </div>
                     </div>
                   ) : (
+
+
                     <div className="py-8 text-center text-muted-foreground">
                       <ServerCog className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>Enter parameters and click "Analyze Traffic" to generate a prediction</p>
+                     {!isLoading ? <p>
+                        Enter parameters and click "Analyze Traffic" to generate
+                        a prediction
+                      </p> : <p> Analyzing......</p>}
                     </div>
+
+                    
                   )}
                 </CardContent>
               </Card>
@@ -384,7 +730,7 @@ const ThreatPrediction = () => {
           </div>
         </div>
       </div>
-      
+
       <Footer />
     </div>
   );
