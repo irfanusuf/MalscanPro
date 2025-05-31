@@ -22,6 +22,12 @@ import { useToast } from "@/components/ui/use-toast";
 import { ShieldAlert, Info, TrendingUp, ServerCog } from "lucide-react";
 import NavigationBar from "@/components/NavigationBar";
 import Footer from "@/components/Footer";
+import { analyzeThreatUsingLogisticRegression } from "@/lib/LogisticRegression";
+import { analyzeThreatUsingNeuralNetwok } from "@/lib/NeuralNetwork";
+import { analyzeThreatUsingDecisionTree } from "@/lib/DecisionTree";
+import { analyzeThreatUsingRandomForest } from "@/lib/RandomForest";
+import { analyzeThreatAndGetAverage } from "@/lib/All";
+import { generateDetails, generateRemedy } from "@/lib/utils";
 
 interface FormData {
   static_prio: number;
@@ -30,15 +36,15 @@ interface FormData {
   nvcsw: number;
   vm_truncate_count: number;
   maj_flt: number;
-  end_data: number;
-  shared_vm: number;
-  exec_vm: number;
-  mm_users: number;
-  reserved_vm: number;
-  map_count: number;
-  last_interval: number;
-  total_vm: number;
-  nivcsw: number;
+  // end_data: number;
+  // shared_vm: number;
+  // exec_vm: number;
+  // mm_users: number;
+  // reserved_vm: number;
+  // map_count: number;
+  // last_interval: number;
+  // total_vm: number;
+  // nivcsw: number;
   model: string;
 }
 
@@ -49,29 +55,32 @@ const ThreatPrediction = () => {
 
   const [result, setResult] = useState<null | {
     prediction: string;
-    type: string;
+    category: string;
     confidence: number;
     threatLevel: "low" | "medium" | "high";
     details: string;
+    model: string;
+    time: string;
+    remedy: string;
     breakdown: { field: string; value: number | string; weight: number }[];
   }>(null);
 
   const [formData, setFormData] = useState<FormData>({
     static_prio: 10,
-    utime: 50,
+    utime: 400,
     free_area_cache: 1000,
-    nvcsw: 20,
-    vm_truncate_count: 5,
-    maj_flt: 2,
-    end_data: 0x08000000,
-    shared_vm: 500,
-    exec_vm: 600,
-    mm_users: 1,
-    reserved_vm: 150,
-    map_count: 30,
-    last_interval: 10,
-    total_vm: 2000,
-    nivcsw: 5,
+    nvcsw: 300,
+    vm_truncate_count: 100,
+    maj_flt: 10,
+    // end_data: 0x08000000,
+    // shared_vm: 500,
+    // exec_vm: 600,
+    // mm_users: 1,
+    // reserved_vm: 150,
+    // map_count: 30,
+    // last_interval: 10,
+    // total_vm: 2000,
+    // nivcsw: 5,
     model: "random_forest",
   });
 
@@ -100,129 +109,85 @@ const ThreatPrediction = () => {
     setFormData((prev) => ({ ...prev, model: value }));
   };
 
-
-
-  interface ThreatAnalysisResult {
-  score: number;
-  breakdown: { field: string; value: number | string; weight: number }[];
-}
-
-  const analyzeThreat = (data: FormData): ThreatAnalysisResult => {
-    let score = 0;
-      const breakdown: ThreatAnalysisResult["breakdown"] = [];
-
-       const add = (field: string, value: number | string, condition: boolean, weight: number) => {
-    if (condition) {
-      breakdown.push({ field, value, weight });
-      score += weight;
-    }
-  };
-
-    // // Priority: lower static priority → higher threat
-    // score += data.static_prio < 20 ? 0.1 : 0;
-
-    // // User time: unusually high utime may indicate heavy computation
-    // score += data.utime > 100 ? 0.05 : 0;
-
-    // // Free area cache: low free memory can indicate memory pressure
-    // score += data.free_area_cache < 500 ? 0.05 : 0;
-
-    // // Voluntary context switches: very high may be abnormal
-    // score += data.nvcsw > 50 ? 0.1 : 0;
-
-    // // VM truncate count: high count can indicate memory tampering
-    // score += data.vm_truncate_count > 10 ? 0.1 : 0;
-
-    // // Major faults: high value can suggest I/O or memory issues
-    // score += data.maj_flt > 5 ? 0.1 : 0;
-
-    // // End of data segment: very high might suggest obfuscation
-    // score += data.end_data > 0x10000000 ? 0.05 : 0;
-
-    // // Shared VM: unusually high could suggest multi-process manipulation
-    // score += data.shared_vm > 1000 ? 0.05 : 0;
-
-    // // Executable VM: high value might suggest code loading
-    // score += data.exec_vm > 1000 ? 0.1 : 0;
-
-    // // MM users: high number of processes sharing memory
-    // score += data.mm_users > 3 ? 0.05 : 0;
-
-    // // Reserved VM: high amount of reserved memory
-    // score += data.reserved_vm > 500 ? 0.05 : 0;
-
-    // // Map count: too many memory maps can be suspicious
-    // score += data.map_count > 50 ? 0.15 : 0;
-
-    // // Last interval: very small interval might be aggressive behavior
-    // score += data.last_interval < 5 ? 0.05 : 0;
-
-    // // Total VM: very large memory space
-    // score += data.total_vm > 5000 ? 0.15 : 0;
-
-    // // Involuntary context switches: frequent forced context switches
-    // score += data.nivcsw > 10 ? 0.1 : 0;
-
-     add("static_prio", data.static_prio, data.static_prio < 20, 0.1);
-  add("utime", data.utime, data.utime > 100, 0.05);
-  add("free_area_cache", data.free_area_cache, data.free_area_cache < 500, 0.05);
-  add("nvcsw", data.nvcsw, data.nvcsw > 50, 0.1);
-  add("vm_truncate_count", data.vm_truncate_count, data.vm_truncate_count > 10, 0.1);
-  add("maj_flt", data.maj_flt, data.maj_flt > 5, 0.1);
-  add("end_data", data.end_data, data.end_data > 0x10000000, 0.05);
-  add("shared_vm", data.shared_vm, data.shared_vm > 1000, 0.05);
-  add("exec_vm", data.exec_vm, data.exec_vm > 1000, 0.1);
-  add("mm_users", data.mm_users, data.mm_users > 3, 0.05);
-  add("reserved_vm", data.reserved_vm, data.reserved_vm > 500, 0.05);
-  add("map_count", data.map_count, data.map_count > 50, 0.15);
-  add("last_interval", data.last_interval, data.last_interval < 5, 0.05);
-  add("total_vm", data.total_vm, data.total_vm > 5000, 0.15);
-  add("nivcsw", data.nivcsw, data.nivcsw > 10, 0.1);
-
-
-    // Clamp the score to [0, 1]
-     return {
-    score: Math.min(1, score),
-    breakdown,
-  };
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
       setIsLoading(true);
 
+      let score: number;
+      let breakdown: any;
+      let model: string;
+      let threatLevel: "low" | "medium" | "high";
+      let prediction: string;
+      let category: string;
+
       setTimeout(() => {
-        const {score , breakdown} = analyzeThreat(formData);
-        let threatLevel: "low" | "medium" | "high";
-        let prediction: string;
-        let type: string;
+        if (formData.model === "random_forest") {
+          ({ score, breakdown } = analyzeThreatUsingRandomForest(formData));
+          model = "Random Forest";
+        } else if (formData.model === "logistic_regression") {
+          ({ score, breakdown } =
+            analyzeThreatUsingLogisticRegression(formData));
+          model = "Logistic Regression";
+        } else if (formData.model === "neural_network") {
+          ({ score, breakdown } = analyzeThreatUsingNeuralNetwok(formData));
+          model = "Neural Network";
+        } else if (formData.model === "decision_tree") {
+          ({ score, breakdown } = analyzeThreatUsingDecisionTree(formData));
+          model = "Decision Tree";
+        } else if (formData.model === "all") {
+          ({ score, breakdown } = analyzeThreatAndGetAverage(formData));
+          model = "All models";
+        }
 
         if (score < 0.3) {
           threatLevel = "low";
           prediction = "Normal Traffic";
-          type = "No Malware";
+          category = "No Malware";
         } else if (score < 0.7) {
           threatLevel = "medium";
           prediction = "Suspicious Activity";
-          type = "Malware Detected";
+          threatLevel = "medium";
+
+          // Further breakdown within the malware range
+          if (score < 0.4) {
+            category = "Adware";
+          } else if (score < 0.5) {
+            category = "Spyware";
+          } else if (score < 0.6) {
+            category = "Worm";
+          } else {
+            category = "Trojan Downloader";
+          }
         } else {
           threatLevel = "high";
           prediction = "Potential Attack";
-          type = "Trojan Detected";
+
+          // Further breakdown within the high threat range
+          if (score < 0.75) {
+            category = "Trojan Horse";
+          } else if (score < 0.8) {
+            category = "Worm";
+          } else if (score < 0.85) {
+            category = "Ransomware";
+          } else if (score < 0.9) {
+            category = "Rootkit";
+          } else {
+            category = "Advanced Persistent Threat (APT)";
+          }
         }
 
         setResult({
           prediction,
-          type,
+          category,
           confidence: Math.round(score * 100),
           threatLevel,
-          details: `Based on the ${formData.model.replace(
-            "_",
-            " "
-          )} model, the analysis indicates ${prediction.toLowerCase()}.`,
-           breakdown, // ← Add this
+          model,
+          details: generateDetails(prediction, category, formData.model),
+          remedy: generateRemedy(prediction, category),
+          breakdown, // ← Add this
+          time: new Date().toLocaleString(),
         });
 
         toast({
@@ -234,11 +199,12 @@ const ThreatPrediction = () => {
       }, 3000); // Optional: keep a small delay for UX
     } catch (error) {
       console.error(error);
-    } finally {
-      setTimeout(() => {
-        setResult(null);
-      }, 20000);
-    }
+    } 
+    // finally {
+    //   setTimeout(() => {
+    //     setResult(null);
+    //   }, 20000);
+    // }
   };
 
   return (
@@ -295,6 +261,7 @@ const ThreatPrediction = () => {
                           min="0"
                           max="139"
                           required
+                          placeholder=" e.g  10"
                         />
                         <p className="text-xs text-muted-foreground">
                           The base priority of a process. Lower values have
@@ -318,6 +285,7 @@ const ThreatPrediction = () => {
                           min="0"
                           max="1000000"
                           required
+                          placeholder=" e.g  1000 clock ticks (without unit) "
                         />
                         <p className="text-xs text-muted-foreground">
                           Time the process has executed in user mode.
@@ -340,6 +308,7 @@ const ThreatPrediction = () => {
                           min="0"
                           max="1000000"
                           required
+                          placeholder=" e.g  10000 kb (without unit)"
                         />
                         <p className="text-xs text-muted-foreground">
                           Amount of free memory available in the system cache.
@@ -362,6 +331,7 @@ const ThreatPrediction = () => {
                           min="0"
                           max="100000"
                           required
+                          placeholder=" e.g  10000 "
                         />
                         <p className="text-xs text-muted-foreground">
                           Times the process voluntarily yielded the CPU.
@@ -384,6 +354,7 @@ const ThreatPrediction = () => {
                           min="0"
                           max="10000"
                           required
+                          placeholder=" e.g  5"
                         />
                         <p className="text-xs text-muted-foreground">
                           Number of truncation operations on the virtual memory
@@ -407,208 +378,10 @@ const ThreatPrediction = () => {
                           min="0"
                           max="10000"
                           required
+                          placeholder=" e.g  10"
                         />
                         <p className="text-xs text-muted-foreground">
                           Number of page faults requiring disk access.
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="end_data">
-                          End of Data Segment
-                          <span className="ml-1 text-xs text-muted-foreground">
-                            (0x08000000–0xC0000000)
-                          </span>
-                        </Label>
-                        <Input
-                          id="end_data"
-                          name="end_data"
-                          type="text"
-                          value={formData.end_data}
-                          onChange={handleChange}
-                          // pattern="^0x[0-9A-Fa-f]+$"
-                          required
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Hex address marking the end of the process’s data
-                          segment.
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="shared_vm">
-                          Shared Virtual Memory
-                          <span className="ml-1 text-xs text-muted-foreground">
-                            (0–1,048,576 KB)
-                          </span>
-                        </Label>
-                        <Input
-                          id="shared_vm"
-                          name="shared_vm"
-                          type="number"
-                          value={formData.shared_vm}
-                          onChange={handleChange}
-                          min="0"
-                          max="1048576"
-                          required
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Memory shared among processes.
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="exec_vm">
-                          Executable Virtual Memory
-                          <span className="ml-1 text-xs text-muted-foreground">
-                            (0–524,288 KB)
-                          </span>
-                        </Label>
-                        <Input
-                          id="exec_vm"
-                          name="exec_vm"
-                          type="number"
-                          value={formData.exec_vm}
-                          onChange={handleChange}
-                          min="0"
-                          max="524288"
-                          required
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Size of executable code in virtual memory.
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="mm_users">
-                          Memory Manager Users
-                          <span className="ml-1 text-xs text-muted-foreground">
-                            (1–500)
-                          </span>
-                        </Label>
-                        <Input
-                          id="mm_users"
-                          name="mm_users"
-                          type="number"
-                          value={formData.mm_users}
-                          onChange={handleChange}
-                          min="1"
-                          max="500"
-                          required
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Number of processes using the same memory manager.
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="reserved_vm">
-                          Reserved Virtual Memory
-                          <span className="ml-1 text-xs text-muted-foreground">
-                            (0–1,048,576 KB)
-                          </span>
-                        </Label>
-                        <Input
-                          id="reserved_vm"
-                          name="reserved_vm"
-                          type="number"
-                          value={formData.reserved_vm}
-                          onChange={handleChange}
-                          min="0"
-                          max="1048576"
-                          required
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Reserved virtual memory not currently in use.
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="map_count">
-                          Memory Map Count
-                          <span className="ml-1 text-xs text-muted-foreground">
-                            (1–10,000)
-                          </span>
-                        </Label>
-                        <Input
-                          id="map_count"
-                          name="map_count"
-                          type="number"
-                          value={formData.map_count}
-                          onChange={handleChange}
-                          min="1"
-                          max="10000"
-                          required
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Number of virtual memory mappings for the process.
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="last_interval">
-                          Last Interval
-                          <span className="ml-1 text-xs text-muted-foreground">
-                            (0–3600 seconds)
-                          </span>
-                        </Label>
-                        <Input
-                          id="last_interval"
-                          name="last_interval"
-                          type="number"
-                          value={formData.last_interval}
-                          onChange={handleChange}
-                          min="0"
-                          max="3600"
-                          required
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Time in seconds since the last relevant system event.
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="total_vm">
-                          Total Virtual Memory
-                          <span className="ml-1 text-xs text-muted-foreground">
-                            (0–2,097,152 KB)
-                          </span>
-                        </Label>
-                        <Input
-                          id="total_vm"
-                          name="total_vm"
-                          type="number"
-                          value={formData.total_vm}
-                          onChange={handleChange}
-                          min="0"
-                          max="2097152"
-                          required
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Total virtual memory in use by the process.
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="nivcsw">
-                          Involuntary Context Switches
-                          <span className="ml-1 text-xs text-muted-foreground">
-                            (0–100,000)
-                          </span>
-                        </Label>
-                        <Input
-                          id="nivcsw"
-                          name="nivcsw"
-                          type="number"
-                          value={formData.nivcsw}
-                          onChange={handleChange}
-                          min="0"
-                          max="100000"
-                          required
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Times process was preempted involuntarily by the OS
-                          scheduler.
                         </p>
                       </div>
                     </div>
@@ -635,6 +408,7 @@ const ThreatPrediction = () => {
                           <SelectItem value="neural_network">
                             Neural Network
                           </SelectItem>
+                          <SelectItem value="all">All</SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
@@ -680,13 +454,13 @@ const ThreatPrediction = () => {
                       <div className="text-center py-3">
                         <div
                           className={`inline-flex items-center justify-center rounded-full p-4 mb-2
-            ${
-              result.threatLevel === "low"
-                ? "bg-green-500/20 text-green-500"
-                : result.threatLevel === "medium"
-                ? "bg-yellow-500/20 text-yellow-500"
-                : "bg-red-500/20 text-red-500"
-            }`}
+                        ${
+                          result.threatLevel === "low"
+                            ? "bg-green-500/20 text-green-500"
+                            : result.threatLevel === "medium"
+                            ? "bg-yellow-500/20 text-yellow-500"
+                            : "bg-red-500/20 text-red-500"
+                        }`}
                         >
                           {result.threatLevel === "low" ? (
                             <ShieldAlert className="w-8 h-8" />
@@ -696,12 +470,15 @@ const ThreatPrediction = () => {
                             <TrendingUp className="w-8 h-8" />
                           )}
                         </div>
+
+                        <h3 className="text-2xl font-bold mb-1">
+                          {result.model}
+                        </h3>
+
                         <h3 className="text-2xl font-bold mb-1">
                           {result.prediction}
                         </h3>
-                        <h3 className="text-2xl font-bold mb-1">
-                          {result.type}
-                        </h3>
+
                         <p className="text-muted-foreground">
                           Confidence: {result.confidence}%
                         </p>
@@ -732,7 +509,7 @@ const ThreatPrediction = () => {
                           </div>
                         </div>
 
-                        {/* Score Breakdown
+                        {/* // Score Breakdown */}
                         {result.breakdown?.length > 0 && (
                           <div className="space-y-2">
                             <h4 className="text-sm font-semibold">
@@ -765,20 +542,27 @@ const ThreatPrediction = () => {
                               </li>
                             </ul>
                           </div>
-                        )} */}
+                        )}  
 
                         {/* Result Details */}
                         <div className="p-4 bg-secondary/30 rounded-lg text-sm">
-                          <p>{result.details}</p>
+                         <p className="pb-1 "> <b> Details and Category  </b>  </p> 
+                         <p> {result.details} </p> 
+                        </div>
+
+                        {/* remedy Details */}
+                        <div className="p-4 bg-secondary/30 rounded-lg text-sm">
+                           <p className="pb-1">  <b>Remedy   </b> </p> 
+                          <p>  {result.remedy}</p>
                         </div>
 
                         {/* Footer Info */}
                         <div className="text-xs text-muted-foreground">
                           <p>
                             Analysis performed using{" "}
-                            {formData.model.replace("_", " ")} algorithm
+                            {result.model.replace("_", " ")} algorithm
                           </p>
-                          <p>Timestamp: {new Date().toLocaleString()}</p>
+                          <p>Timestamp: {result.time}</p>
                         </div>
                       </div>
                     </div>
